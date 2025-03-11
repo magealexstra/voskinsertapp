@@ -12,6 +12,45 @@ import threading
 import subprocess
 from pathlib import Path
 
+# Base directory for the project
+base_dir = Path(__file__).resolve().parent.parent
+
+# Check if we're in a virtual environment
+def is_in_virtualenv():
+    return hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix)
+
+# Import or set up the virtual environment if needed
+if not is_in_virtualenv():
+    # First, try to import the setup function
+    try:
+        # Add the parent directory to the path so we can import the dictation module
+        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if parent_dir not in sys.path:
+            sys.path.append(parent_dir)
+            
+        # Import the setup function
+        from vosk_dictation.dictation import setup_virtual_env
+        
+        # Set up the virtual environment
+        print("Not running in a virtual environment. Setting up...")
+        if setup_virtual_env(base_dir):
+            # Activate the virtual environment
+            venv_python = base_dir / "venv" / "bin" / "python"
+            if sys.platform == "win32":
+                venv_python = base_dir / "venv" / "Scripts" / "python.exe"
+                
+            if venv_python.exists():
+                print(f"Restarting with virtual environment: {venv_python}")
+                os.execl(str(venv_python), str(venv_python), *sys.argv)
+            else:
+                print("Virtual environment created but Python executable not found.")
+        else:
+            print("Failed to set up virtual environment. Continuing with system Python...")
+    except Exception as e:
+        print(f"Error setting up virtual environment: {e}")
+        print("Continuing with system Python...")
+
+# Now try to import PyQt5
 try:
     from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                                 QHBoxLayout, QPushButton, QLabel, QScrollArea, 

@@ -53,15 +53,15 @@ A standalone dictation tool using VOSK for speech recognition with ydotool integ
    ```
    
    The installation script will:
+   - Set up a virtual environment automatically
    - Install all required dependencies
    - Check for ydotool (required for text entry mode)
    - Set up the command-line tool and GUI
 
-3. Alternatively, install manually:
+3. Alternatively, use the built-in setup:
    ```bash
-   python -m venv venv
+   python -m vosk_dictation.dictation --setup
    source venv/bin/activate
-   pip install -e .
    ```
 
 ## Usage
@@ -71,6 +71,8 @@ A standalone dictation tool using VOSK for speech recognition with ydotool integ
 ```bash
 vosk-dictation --text-entry
 ```
+
+> **Note:** The application will automatically set up a virtual environment if needed when you run it for the first time.
 
 ### Graphical User Interface
 

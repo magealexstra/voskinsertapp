@@ -9,15 +9,28 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-# Check if pip is installed
-if ! command -v pip3 &> /dev/null; then
-    echo "pip3 is required but not installed. Please install pip3 and try again."
-    exit 1
-fi
+# Get the directory of the script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-# Install the package in development mode
-echo "Installing package dependencies..."
-pip3 install -e .
+# Use the built-in setup functionality
+echo "Setting up virtual environment and installing dependencies..."
+python3 -m vosk_dictation.dictation --setup
+
+# Check if the virtual environment was created
+if [ -d "$SCRIPT_DIR/venv" ]; then
+    echo "Virtual environment created successfully."
+    # Activate the virtual environment
+    source "$SCRIPT_DIR/venv/bin/activate"
+    
+    # Install the package in development mode
+    echo "Installing package in development mode..."
+    pip install -e .
+else
+    echo "Virtual environment setup failed. Falling back to system Python..."
+    # Install the package in development mode
+    echo "Installing package dependencies..."
+    pip3 install -e .
+fi
 
 # Check if ydotool is installed
 if ! command -v ydotool &> /dev/null; then

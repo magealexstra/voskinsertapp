@@ -832,6 +832,10 @@ def main():
     """
     import argparse
     
+    # Check if we're in a virtual environment
+    def is_in_virtualenv():
+        return hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix)
+    
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="VOSK Dictation Tool")
     parser.add_argument("--model-dir", help="Path to the VOSK model directory")
@@ -842,6 +846,7 @@ def main():
     parser.add_argument("--text-entry", action="store_true", help="Run in text entry mode (insert at cursor position)")
     parser.add_argument("--setup", action="store_true", help="Set up virtual environment and install dependencies")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument("--no-venv-check", action="store_true", help="Skip virtual environment check")
     
     args = parser.parse_args()
     
@@ -849,22 +854,52 @@ def main():
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
     
-    # Handle setup argument
-    if args.setup:
-        # Get the base directory (project root)
-        base_dir = Path(__file__).resolve().parent.parent
-        print(f"Setting up VOSK dictation environment in {base_dir}...")
+    # Get the base directory (project root)
+    base_dir = Path(__file__).resolve().parent.parent
+    
+    # Check if we need to set up the virtual environment
+    if not args.no_venv_check and (args.setup or not is_in_virtualenv()):
+        if args.setup:
+            print(f"Setting up VOSK dictation environment in {base_dir}...")
+        elif not is_in_virtualenv():
+            print("Not running in a virtual environment. Setting up...")
+            
         if setup_virtual_env(base_dir):
-            venv_activate = base_dir / "venv" / "bin" / "activate"
-            print(f"\nSetup complete! To use the VOSK dictation tool:")
-            print(f"1. Activate the virtual environment:")
-            print(f"   source {venv_activate}")
-            print(f"2. Run the dictation tool:")
-            print(f"   python -m vosk_dictation.dictation --text-entry")
-            sys.exit(0)
+            # If this is just a setup command, exit with instructions
+            if args.setup:
+                venv_activate = base_dir / "venv" / "bin" / "activate"
+                if sys.platform == "win32":
+                    venv_activate = base_dir / "venv" / "Scripts" / "activate.bat"
+                print(f"\nSetup complete! To use the VOSK dictation tool:")
+                print(f"1. Activate the virtual environment:")
+                if sys.platform == "win32":
+                    print(f"   {venv_activate}")
+                else:
+                    print(f"   source {venv_activate}")
+                print(f"2. Run the dictation tool:")
+                print(f"   python -m vosk_dictation.dictation --text-entry")
+                sys.exit(0)
+            # Otherwise, restart with the virtual environment
+            elif not is_in_virtualenv():
+                venv_python = base_dir / "venv" / "bin" / "python"
+                if sys.platform == "win32":
+                    venv_python = base_dir / "venv" / "Scripts" / "python.exe"
+                    
+                if venv_python.exists():
+                    print(f"Restarting with virtual environment: {venv_python}")
+                    # Add --no-venv-check to avoid infinite loop
+                    new_args = sys.argv.copy()
+                    if "--no-venv-check" not in new_args:
+                        new_args.append("--no-venv-check")
+                    os.execl(str(venv_python), str(venv_python), *new_args)
+                    return  # This will not be reached if execl succeeds
+                else:
+                    print("Virtual environment created but Python executable not found.")
+                    print("Continuing with system Python...")
         else:
             print("Failed to set up virtual environment.")
-            sys.exit(1)
+            if args.setup:
+                sys.exit(1)
     
     # Create and start the dictation tool
     dictation = VoskDictation(
