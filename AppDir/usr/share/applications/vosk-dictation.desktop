@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=VOSK Dictation
+Exec=AppRun
+Icon=vosk-dictation
+Type=Application
+Categories=Utility;Audio;
+Comment=A standalone dictation tool using VOSK for speech recognition
+Terminal=false
+StartupNotify=true

@@ -12,6 +12,8 @@ A standalone dictation tool using VOSK for speech recognition with ydotool integ
 - **Fast Response**: Optimized for speed and responsiveness
 - **Automatic Model Setup**: Downloads and configures VOSK speech recognition models as needed
 - **Modern GUI**: Cross-platform graphical interface with dark theme for easy control
+- **Configurable Audio Settings**: Select audio devices, sample rates, and block sizes
+- **Multiple Text Insertion Methods**: Support for ydotool, xdotool, wtype, and clipboard insertion
 
 ## Requirements
 
@@ -91,6 +93,7 @@ python -m vosk_dictation.gui
 The GUI provides:
 - Start/Stop buttons for dictation control
 - Toggle button to switch between text entry and standard modes
+- Settings dialog for configuring audio devices and text insertion methods
 - History panel showing the last 3-4 dictation entries
 - Copy functionality for each dictation entry
 - Modern dark theme for reduced eye strain

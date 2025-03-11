@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Get the directory where the AppImage is mounted
+APPDIR="$(dirname "$(readlink -f "$0")")"
+
+# Set environment variables
+export PATH="${APPDIR}/usr/bin:${PATH}"
+export PYTHONPATH="${APPDIR}/usr/lib:${PYTHONPATH}"
+export LD_LIBRARY_PATH="${APPDIR}/usr/lib:${LD_LIBRARY_PATH}"
+
+# Create a config directory in the user's home if it doesn't exist
+CONFIG_DIR="${HOME}/.config/vosk-dictation"
+mkdir -p "${CONFIG_DIR}"
+
+# Check if we have a virtual environment in the config directory
+VENV_DIR="${CONFIG_DIR}/venv"
+if [ ! -d "${VENV_DIR}" ]; then
+    echo "Setting up virtual environment for VOSK Dictation..."
+    python3 -m venv "${VENV_DIR}"
+    
+    # Activate the virtual environment
+    source "${VENV_DIR}/bin/activate"
+    
+    # Install dependencies
+    pip install vosk==0.3.45 sounddevice==0.4.6 python-dotenv==1.0.0 requests==2.31.0 PyQt5>=5.15.0
+    
+    echo "Virtual environment setup complete."
+else
+    # Activate the virtual environment
+    source "${VENV_DIR}/bin/activate"
+fi
+
+# Check if we're launching the GUI or CLI version
+if [ "$1" == "--gui" ] || [ -z "$1" ]; then
+    # Launch the GUI version
+    "${VENV_DIR}/bin/python" "${APPDIR}/usr/lib/vosk_dictation/gui.py" "${@:2}"
+else
+    # Launch the CLI version
+    "${VENV_DIR}/bin/python" "${APPDIR}/usr/lib/vosk_dictation/dictation.py" "$@"
+fi
