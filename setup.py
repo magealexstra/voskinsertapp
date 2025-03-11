@@ -9,11 +9,14 @@ setup(
     install_requires=[
         "vosk==0.3.45",
         "sounddevice==0.4.6",
-        "python-dotenv==1.0.0"
+        "python-dotenv==1.0.0",
+        "requests==2.31.0",
+        "PyQt5>=5.15.0"
     ],
     entry_points={
         'console_scripts': [
             'vosk-dictation=vosk_dictation.dictation:main',
+            'vosk-dictation-gui=vosk_dictation.gui:main',
         ],
     },
     classifiers=[

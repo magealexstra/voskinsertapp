@@ -10,6 +10,8 @@ A standalone dictation tool using VOSK for speech recognition with ydotool integ
 - **Suspend/Resume**: Temporarily pause dictation when needed
 - **Self-Contained**: Runs independently with minimal dependencies
 - **Fast Response**: Optimized for speed and responsiveness
+- **Automatic Model Setup**: Downloads and configures VOSK speech recognition models as needed
+- **Modern GUI**: Cross-platform graphical interface with dark theme for easy control
 
 ## Requirements
 
@@ -23,8 +25,8 @@ A standalone dictation tool using VOSK for speech recognition with ydotool integ
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/magealexstra/voskinsertapp.git
-   cd voskinsertapp
+   git clone https://github.com/magealexstra/vosk-dictation.git
+   cd vosk-dictation
    ```
 
 2. Set up the virtual environment and install dependencies:
@@ -41,28 +43,57 @@ A standalone dictation tool using VOSK for speech recognition with ydotool integ
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/magealexstra/voskinsertapp.git
-   cd voskinsertapp
+   git clone https://github.com/magealexstra/vosk-dictation.git
+   cd vosk-dictation
    ```
 
-2. Create a virtual environment:
+2. Run the installation script:
+   ```bash
+   ./install.sh
+   ```
+   
+   The installation script will:
+   - Install all required dependencies
+   - Check for ydotool (required for text entry mode)
+   - Set up the command-line tool and GUI
+
+3. Alternatively, install manually:
    ```bash
    python -m venv venv
    source venv/bin/activate
-   ```
-
-3. Install the package:
-   ```bash
    pip install -e .
    ```
 
 ## Usage
 
-### Basic Usage
+### Basic Usage (Command Line)
 
 ```bash
 vosk-dictation --text-entry
 ```
+
+### Graphical User Interface
+
+A modern cross-platform GUI is available for easier control of the dictation tool:
+
+```bash
+vosk-dictation-gui
+```
+
+Or run directly from the Python module:
+
+```bash
+python -m vosk_dictation.gui
+```
+
+The GUI provides:
+- Start/Stop buttons for dictation control
+- Toggle button to switch between text entry and standard modes
+- History panel showing the last 3-4 dictation entries
+- Copy functionality for each dictation entry
+- Modern dark theme for reduced eye strain
+
+The GUI will automatically install PyQt5 if it's not already installed on your system.
 
 ### Command Line Options
 
@@ -125,11 +156,17 @@ If ydotool is not working properly, make sure:
    sudo udevadm trigger
    ```
 
-### VOSK Model Not Found
+### VOSK Model Management
 
-If the VOSK model is not found, the tool will attempt to download it automatically. If this fails, you can manually download a model from [the VOSK website](https://alphacephei.com/vosk/models) and place it in one of these directories:
+The tool now automatically downloads and sets up the VOSK model when needed. If no model is found, it will:
 
-- `~/.cache/vosk`
+1. Create the necessary directory structure in `~/.cache/vosk`
+2. Download an appropriate English model
+3. Extract and prepare the model for use
+
+If automatic download fails, you can manually download a model from [the VOSK website](https://alphacephei.com/vosk/models) and place it in one of these directories:
+
+- `~/.cache/vosk` (recommended)
 - `~/vosk-models`
 - `/usr/share/vosk`
 - `/usr/local/share/vosk`

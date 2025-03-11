@@ -18,7 +18,7 @@ import select
 import queue
 import json
 from pathlib import Path
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -166,13 +166,15 @@ def setup_virtual_env(base_dir):
         standalone_requirements = [
             "vosk==0.3.45",
             "sounddevice==0.4.6",
-            "python-dotenv==1.0.0"
+            "python-dotenv==1.0.0",
+            "requests==2.31.0"
         ]
         
-        # Create standalone requirements file
+        # Use existing requirements file if it exists, otherwise create one
         standalone_req_file = base_dir / "requirements.txt"
-        with open(standalone_req_file, "w") as f:
-            f.write("\n".join(standalone_requirements))
+        if not standalone_req_file.exists():
+            with open(standalone_req_file, "w") as f:
+                f.write("\n".join(standalone_requirements))
         
         # Check if virtual environment exists
         if not venv_dir.exists():
@@ -287,6 +289,14 @@ class VoskDictation:
                 print("sounddevice not found. Please install it: pip install sounddevice")
                 missing_deps = True
                 
+            # Check for requests (needed for model download)
+            try:
+                import requests
+                logger.info("requests is installed.")
+            except ImportError:
+                print("requests not found. Please install it: pip install requests")
+                missing_deps = True
+                
             # If dependencies are missing, try to set up virtual environment
             if missing_deps:
                 print("\nSetting up virtual environment for VOSK dictation...")
@@ -379,32 +389,97 @@ class VoskDictation:
             str: Path to the downloaded model directory, or None if download failed
         """
         try:
-            import urllib.request
-            import tarfile
+            import requests
+            import zipfile
+            import io
             
-            # Determine model URL based on language
-            model_name = f"vosk-model-small-{self.language.lower()}"
-            model_url = f"https://alphacephei.com/vosk/models/{model_name}.zip"
+            # Create models directory in user's home cache directory
+            cache_dir = os.path.expanduser("~/.cache/vosk")
+            os.makedirs(cache_dir, exist_ok=True)
             
-            # Create models directory if it doesn't exist
-            models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
-            os.makedirs(models_dir, exist_ok=True)
+            # Known working model URLs are defined below, no need for these variables
+            # We'll keep the URLs hardcoded for simplicity
             
-            # Download the model
-            print(f"Downloading VOSK model for {self.language}...")
-            model_path = os.path.join(models_dir, f"{model_name}.zip")
-            urllib.request.urlretrieve(model_url, model_path)
+            # Known working model URLs
+            model_urls = [
+                "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip",
+                "https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip"
+            ]
             
-            # Extract the model
-            print("Extracting model...")
-            with tarfile.open(model_path) as tar:
-                tar.extractall(path=models_dir)
+            for url in model_urls:
+                try:
+                    print(f"Attempting to download model from {url}...")
+                    response = requests.get(url, stream=True)
+                    response.raise_for_status()  # Raise an exception for HTTP errors
+                    
+                    # Get the model name from the URL
+                    model_name = os.path.basename(url).replace(".zip", "")
+                    model_dir = os.path.join(cache_dir, model_name)
+                    
+                    # Extract the model
+                    print("Downloading and extracting model...")
+                    with zipfile.ZipFile(io.BytesIO(response.content)) as zip_file:
+                        # Create the model directory
+                        os.makedirs(model_dir, exist_ok=True)
+                        
+                        # Check the structure of the ZIP file
+                        zip_contents = zip_file.namelist()
+                        zip_root_dirs = {item.split('/')[0] for item in zip_contents if '/' in item}
+                        
+                        # Create a temporary directory for extraction
+                        temp_dir = os.path.join(cache_dir, "temp_extract")
+                        os.makedirs(temp_dir, exist_ok=True)
+                        
+                        # Extract to temporary directory first
+                        zip_file.extractall(path=temp_dir)
+                        
+                        # Check for common model files in the extracted content
+                        model_files = ['final.mdl', 'conf/mfcc.conf', 'ivector/final.ie']
+                        model_found = False
+                        
+                        # Check if the model files are directly in the temp directory
+                        if any(os.path.exists(os.path.join(temp_dir, f)) for f in model_files):
+                            # Model files are at the root of the ZIP
+                            if os.path.exists(model_dir):
+                                import shutil
+                                shutil.rmtree(model_dir)
+                            os.rename(temp_dir, model_dir)
+                            model_found = True
+                        else:
+                            # Check subdirectories for model files
+                            for root_dir in zip_root_dirs:
+                                root_path = os.path.join(temp_dir, root_dir)
+                                if os.path.isdir(root_path) and any(os.path.exists(os.path.join(root_path, f)) for f in model_files):
+                                    # Found model files in a subdirectory
+                                    if os.path.exists(model_dir):
+                                        import shutil
+                                        shutil.rmtree(model_dir)
+                                    os.rename(root_path, model_dir)
+                                    model_found = True
+                                    break
+                        
+                        # Clean up the temp directory if it still exists
+                        if os.path.exists(temp_dir):
+                            import shutil
+                            shutil.rmtree(temp_dir)
+                            
+                        if not model_found:
+                            print("Warning: Could not identify model files in the downloaded archive.")
+                            print("The model may not work correctly.")
+                    
+                    print(f"Model downloaded and extracted to {model_dir}")
+                    return model_dir
+                    
+                except requests.exceptions.HTTPError as e:
+                    print(f"Error downloading model: {e}")
+                    continue
+                except Exception as e:
+                    print(f"Error extracting model: {e}")
+                    continue
             
-            # Remove the zip file
-            os.remove(model_path)
-            
-            print(f"Model downloaded and extracted to {os.path.join(models_dir, model_name)}")
-            return os.path.join(models_dir, model_name)
+            # If we get here, all download attempts failed
+            print("Failed to download VOSK model. Please download it manually.")
+            return None
             
         except Exception as e:
             logger.error(f"Error downloading model: {e}")
